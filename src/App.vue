@@ -4,10 +4,10 @@ import { useLocalStorage } from '@vueuse/core'
 
 const servicios = useLocalStorage('barberiaRamiro', [])
 
-const verFormulario = ref(false)//Controla si el formulario está visible.
-const verEliminar = ref(false)//Controla si aparece la ventana de confirmación para eliminar.
-const editando = ref(false)//Indica si estamos creando un servicio o editando uno existente.
-const servicioSeleccionado = ref(null)//Guarda el ID del servicio seleccionado.
+const verFormulario = ref(false)
+const verEliminar = ref(false)
+const editando = ref(false)
+const servicioSeleccionado = ref(null)
 const fecha = ref('')
 const nombre = ref('')
 const servicio = ref('')
@@ -17,17 +17,17 @@ const precio = ref('')
 const pago = ref('')
 const estado = ref('')
 const nota = ref('')
-const mensaje = ref('')//Sirve para almacenar mensajes de error.
-const editandoNota = ref(null)//Guarda el ID del servicio cuya nota se está editando.
-const notaTemporal = ref('')//Guarda temporalmente el texto de la nota mientras se está modificando.
-//Se crean las variables del formrulario.
+
+const mensaje = ref('')
+const editandoNota = ref(null)
+const notaTemporal = ref('')
 
 
 function nuevoServicio() {
   limpiar()
   editando.value = false
   verFormulario.value = true
-}//Esta función se ejecuta cuando queremos crear un nuevo servicio.
+}
 
 function limpiar() {
   nombre.value = ''
