@@ -66,28 +66,139 @@ function cambiarServicio() {
   }
 }
 
+
+// Obtener la fecha actual en formato YYYY-MM-DD
+function obtenerFechaHoy() {
+  const hoy = new Date()
+
+  const año = hoy.getFullYear()
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0')
+  const dia = String(hoy.getDate()).padStart(2, '0')
+
+  return `${año}-${mes}-${dia}`
+}
+
+const fechaMinima = obtenerFechaHoy()
+
+
+// Formatear precio como moneda colombiana
+function formatearPrecio(valor) {
+  if (valor === '' || valor === null || valor === undefined) {
+    return ''
+  }
+
+  return Number(valor).toLocaleString('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0
+  })
+}
+
+
+// Validar que el nombre sea realmente un nombre
+function nombreValido(nombreTexto) {
+  const nombreLimpio = nombreTexto.trim()
+
+  // Solo permite letras, tildes, ñ y espacios.
+  // Debe contener mínimo 3 letras.
+  const patron = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]{3,}$/
+
+  return patron.test(nombreLimpio)
+}
+
+
+// Guardar servicio
 function guardar() {
   mensaje.value = ''
 
-  if (
-    nombre.value === '' ||
-    servicio.value === '' ||
-    barbero.value === '' ||
-    fecha.value === '' ||
-    hora.value === '' ||
-    precio.value === '' ||
-    pago.value === '' ||
-    estado.value === ''
-  ) {
-    mensaje.value = 'Debes completar todos los campos obligatorios'
+  // Quitar espacios al inicio y al final
+  nombre.value = nombre.value.trim()
+
+  let camposFaltantes = []
+
+  if (nombre.value === '') {
+    camposFaltantes.push('Nombre')
+  }
+
+  if (servicio.value === '') {
+    camposFaltantes.push('Servicio')
+  }
+
+  if (barbero.value === '') {
+    camposFaltantes.push('Barbero')
+  }
+
+  if (fecha.value === '') {
+    camposFaltantes.push('Fecha')
+  }
+
+  if (hora.value === '') {
+    camposFaltantes.push('Hora')
+  }
+
+  if (precio.value === '') {
+    camposFaltantes.push('Precio')
+  }
+
+  if (pago.value === '') {
+    camposFaltantes.push('Método de pago')
+  }
+
+  if (estado.value === '') {
+    camposFaltantes.push('Estado')
+  }
+
+
+  // Mostrar qué campo o campos faltan
+  if (camposFaltantes.length === 1) {
+    mensaje.value = `Completa el campo: ${camposFaltantes[0]}`
     return
   }
 
+  if (camposFaltantes.length > 1) {
+    mensaje.value = `Completa los campos: ${camposFaltantes.join(', ')}`
+    return
+  }
+
+
+  // Validar nombre
+  if (!nombreValido(nombre.value)) {
+    mensaje.value = 'El nombre debe contener solamente letras y espacios'
+    return
+  }
+
+
+  // Validar precio
   if (Number(precio.value) <= 0) {
     mensaje.value = 'El precio debe ser mayor a cero'
     return
   }
 
+
+  // Validar que la fecha no sea anterior a hoy
+  if (fecha.value < fechaMinima) {
+    mensaje.value = 'La fecha no puede ser anterior a hoy'
+    return
+  }
+
+
+  // Si la fecha es hoy, la hora no puede ser anterior a la hora actual
+  if (fecha.value === fechaMinima) {
+    const ahora = new Date()
+
+    const horaActual =
+      String(ahora.getHours()).padStart(2, '0') +
+      ':' +
+      String(ahora.getMinutes()).padStart(2, '0')
+
+    if (hora.value < horaActual) {
+      mensaje.value = 'La hora no puede ser anterior a la hora actual'
+      return
+    }
+  }
+
+
+  // Crear nuevo servicio
   if (editando.value === false) {
     servicios.value.push({
       id: Date.now(),
@@ -103,6 +214,8 @@ function guardar() {
       nota: nota.value
     })
   } else {
+
+    // Editar servicio
     for (let i = 0; i < servicios.value.length; i++) {
       if (servicios.value[i].id === servicioSeleccionado.value) {
         servicios.value[i].nombre = nombre.value
@@ -120,6 +233,7 @@ function guardar() {
 
   cerrarFormulario()
 }
+
 
 function editar(item) {
   editando.value = true
@@ -272,7 +386,7 @@ function cancelarNota() {
           </small>
 
           <h2>
-            ${{ dineroRecibido() }}
+            {{ formatearPrecio(dineroRecibido()) }}
           </h2>
 
         </div>
@@ -415,7 +529,7 @@ function cancelarNota() {
               </small>
 
               <p>
-                ${{ item.precio }}
+                {{ formatearPrecio(item.precio) }}
               </p>
 
             </div>
@@ -649,7 +763,8 @@ function cancelarNota() {
             <input
               v-model="nombre"
               type="text"
-              placeholder="Escriba el nombre"
+              placeholder="Escriba el nombre completo"
+              maxlength="50"
             >
 
           </div>
@@ -734,8 +849,8 @@ function cancelarNota() {
               </label>
 
               <input
-                v-model="precio"
-                type="number"
+                :value="formatearPrecio(precio)"
+                type="text"
                 placeholder="Seleccione un servicio"
                 readonly
               >
@@ -755,6 +870,7 @@ function cancelarNota() {
               <input
                 v-model="fecha"
                 type="date"
+                :min="fechaMinima"
               >
 
             </div>
@@ -779,7 +895,7 @@ function cancelarNota() {
             <div class="grupo">
 
               <label>
-                Método de pago *
+                Método de pago 😅
               </label>
 
               <select v-model="pago">
@@ -807,7 +923,7 @@ function cancelarNota() {
             <div class="grupo">
 
               <label>
-                Estado *
+                Estado ❓
               </label>
 
               <select v-model="estado">
