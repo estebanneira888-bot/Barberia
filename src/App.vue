@@ -8,7 +8,7 @@ const verFormulario = ref(false)//Controla si el formulario está visible.
 const verEliminar = ref(false)//Controla si aparece la ventana de confirmación para eliminar.
 const editando = ref(false)//Indica si estamos creando un servicio o editando uno existente.
 const servicioSeleccionado = ref(null)//Guarda el ID del servicio seleccionado.
-
+const fecha = ref('')
 const nombre = ref('')
 const servicio = ref('')
 const barbero = ref('')
