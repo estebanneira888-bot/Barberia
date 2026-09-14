@@ -10,10 +10,10 @@ const editando = ref(false)
 const servicioSeleccionado = ref(null)
 const fecha = ref('')
 const nombre = ref('')
-const servicio = ref('')
+const servicio = ref([])
 const barbero = ref('')
 const hora = ref('')
-const precio = ref('')
+const precio = ref(0)
 const pago = ref('')
 const estado = ref('')
 const nota = ref('')
@@ -22,6 +22,14 @@ const mensaje = ref('')
 const editandoNota = ref(null)
 const notaTemporal = ref('')
 
+const serviciosDisponibles = [
+  { nombre: 'Corte tradicional ', precio: 20000 },
+  { nombre: 'Corte moderno', precio: 25000 },
+  { nombre: 'Barba', precio: 15000 },
+  { nombre: 'Limpieza facial', precio: 15000 },
+  { nombre: 'Cejas', precio: 10000 },
+  { nombre: 'Tinte', precio: 50000 }
+]
 
 function nuevoServicio() {
   limpiar()
@@ -31,11 +39,11 @@ function nuevoServicio() {
 
 function limpiar() {
   nombre.value = ''
-  servicio.value = ''
+  servicio.value = []
   barbero.value = ''
   fecha.value = ''
   hora.value = ''
-  precio.value = ''
+  precio.value = 0
   pago.value = ''
   estado.value = ''
   nota.value = ''
@@ -49,25 +57,41 @@ function cerrarFormulario() {
 }
 
 function cambiarServicio() {
-  if (servicio.value === 'Corte clásico') {
-    precio.value = 15000
-  } else if (servicio.value === 'Corte moderno') {
-    precio.value = 18000
-  } else if (servicio.value === 'Barba') {
-    precio.value = 10000
-  } else if (servicio.value === 'Corte + barba') {
-    precio.value = 25000
-  } else if (servicio.value === 'Cejas') {
-    precio.value = 5000
-  } else if (servicio.value === 'Tinte') {
-    precio.value = 30000
-  } else {
-    precio.value = ''
+  let total = 0
+
+  for (let i = 0; i < servicio.value.length; i++) {
+    for (let j = 0; j < serviciosDisponibles.length; j++) {
+      if (servicio.value[i] === serviciosDisponibles[j].nombre) {
+        total += serviciosDisponibles[j].precio
+      }
+    }
+  }
+
+  precio.value = total
+}
+
+function obtenerHoraActual() {
+  const ahora = new Date()
+
+  return (
+    String(ahora.getHours()).padStart(2, '0') +
+    ':' +
+    String(ahora.getMinutes()).padStart(2, '0')
+  )
+}
+
+function validarHora() {
+  if (fecha.value === fechaMinima && hora.value !== '') {
+    if (hora.value < obtenerHoraActual()) {
+      hora.value = ''
+      mensaje.value = 'La hora seleccionada ya pasó. Elige una hora posterior a la actual.'
+    } else {
+      mensaje.value = ''
+    }
   }
 }
 
 
-// Obtener la fecha actual en formato YYYY-MM-DD
 function obtenerFechaHoy() {
   const hoy = new Date()
 
@@ -81,7 +105,6 @@ function obtenerFechaHoy() {
 const fechaMinima = obtenerFechaHoy()
 
 
-// Formatear precio como moneda colombiana
 function formatearPrecio(valor) {
   if (valor === '' || valor === null || valor === undefined) {
     return ''
@@ -95,23 +118,18 @@ function formatearPrecio(valor) {
 }
 
 
-// Validar que el nombre sea realmente un nombre
 function nombreValido(nombreTexto) {
   const nombreLimpio = nombreTexto.trim()
 
-  // Solo permite letras, tildes, ñ y espacios.
-  // Debe contener mínimo 3 letras.
   const patron = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]{3,}$/
 
   return patron.test(nombreLimpio)
 }
 
 
-// Guardar servicio
 function guardar() {
   mensaje.value = ''
 
-  // Quitar espacios al inicio y al final
   nombre.value = nombre.value.trim()
 
   let camposFaltantes = []
@@ -120,7 +138,7 @@ function guardar() {
     camposFaltantes.push('Nombre')
   }
 
-  if (servicio.value === '') {
+  if (servicio.value.length === 0) {
     camposFaltantes.push('Servicio')
   }
 
@@ -149,7 +167,6 @@ function guardar() {
   }
 
 
-  // Mostrar qué campo o campos faltan
   if (camposFaltantes.length === 1) {
     mensaje.value = `Completa el campo: ${camposFaltantes[0]}`
     return
@@ -161,28 +178,24 @@ function guardar() {
   }
 
 
-  // Validar nombre
   if (!nombreValido(nombre.value)) {
     mensaje.value = 'El nombre debe contener solamente letras y espacios'
     return
   }
 
 
-  // Validar precio
   if (Number(precio.value) <= 0) {
     mensaje.value = 'El precio debe ser mayor a cero'
     return
   }
 
 
-  // Validar que la fecha no sea anterior a hoy
   if (fecha.value < fechaMinima) {
     mensaje.value = 'La fecha no puede ser anterior a hoy'
     return
   }
 
 
-  // Si la fecha es hoy, la hora no puede ser anterior a la hora actual
   if (fecha.value === fechaMinima) {
     const ahora = new Date()
 
@@ -198,7 +211,6 @@ function guardar() {
   }
 
 
-  // Crear nuevo servicio
   if (editando.value === false) {
     servicios.value.push({
       id: Date.now(),
@@ -215,7 +227,6 @@ function guardar() {
     })
   } else {
 
-    // Editar servicio
     for (let i = 0; i < servicios.value.length; i++) {
       if (servicios.value[i].id === servicioSeleccionado.value) {
         servicios.value[i].nombre = nombre.value
@@ -241,7 +252,12 @@ function editar(item) {
   servicioSeleccionado.value = item.id
 
   nombre.value = item.nombre
-  servicio.value = item.servicio
+  servicio.value = Array.isArray(item.servicio)
+    ? [...item.servicio]
+    : item.servicio
+      ? [item.servicio]
+      : []
+  cambiarServicio()
   barbero.value = item.barbero
   fecha.value = item.fecha
   hora.value = item.hora || ''
@@ -480,7 +496,7 @@ function cancelarNota() {
               </h3>
 
               <p>
-                {{ item.servicio }}
+                {{ Array.isArray(item.servicio) ? item.servicio.join(' + ') : item.servicio }}
               </p>
 
             </div>
@@ -772,43 +788,38 @@ function cancelarNota() {
           <div class="grupo">
 
             <label>
-              Servicio🙌
+              Servicios a realizar🙌
             </label>
 
-            <select
-              v-model="servicio"
-              @change="cambiarServicio"
-            >
+            <div class="servicios-cuadricula">
 
-              <option value="">
-                Seleccione un servicio
-              </option>
+              <button
+                v-for="item in serviciosDisponibles"
+                :key="item.nombre"
+                type="button"
+                class="cuadro-servicio"
+                :class="{ seleccionado: servicio.includes(item.nombre) }"
+                @click="
+                  servicio.includes(item.nombre)
+                    ? servicio.splice(servicio.indexOf(item.nombre), 1)
+                    : servicio.push(item.nombre);
+                  cambiarServicio()
+                "
+              >
+                <span class="cuadro-check">
+                  {{ servicio.includes(item.nombre) ? '✓' : '' }}
+                </span>
 
-              <option value="Corte clásico">
-                Corte clásico
-              </option>
+                <span class="nombre-servicio">
+                  {{ item.nombre }}
+                </span>
 
-              <option value="Corte moderno">
-                Corte moderno
-              </option>
+                <span class="precio-servicio">
+                  ${{ item.precio.toLocaleString('es-CO') }}
+                </span>
+              </button>
 
-              <option value="Barba">
-                Barba
-              </option>
-
-              <option value="Corte + barba">
-                Corte + barba
-              </option>
-
-              <option value="Cejas">
-                Cejas
-              </option>
-
-              <option value="Tinte">
-                Tinte
-              </option>
-
-            </select>
+            </div>
 
           </div>
 
@@ -851,7 +862,7 @@ function cancelarNota() {
               <input
                 :value="formatearPrecio(precio)"
                 type="text"
-                placeholder="Seleccione un servicio"
+                placeholder="Seleccione uno o varios servicios"
                 readonly
               >
 
@@ -871,6 +882,7 @@ function cancelarNota() {
                 v-model="fecha"
                 type="date"
                 :min="fechaMinima"
+                @change="validarHora"
               >
 
             </div>
@@ -884,6 +896,8 @@ function cancelarNota() {
               <input
                 v-model="hora"
                 type="time"
+                :min="fecha === fechaMinima ? obtenerHoraActual() : '00:00'"
+                @change="validarHora"
               >
 
             </div>
@@ -1046,6 +1060,7 @@ main {
 }
 
 .inicio {
+
   background:
     linear-gradient(
       rgba(20, 20, 20, 0.70),
@@ -1077,8 +1092,7 @@ main {
 
 h2{
   font-family:'Times New Roman', Times, serif;
-  font-size: 30
-  px;
+  font-size: 30px;
 }
 
 .inicio h1 {
@@ -1517,6 +1531,72 @@ textarea {
   resize: vertical;
 }
 
+.servicios-cuadricula {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.cuadro-servicio {
+  position: relative;
+  background: white;
+  border: 2px solid #d5d5d5;
+  border-radius: 10px;
+  padding: 14px;
+  min-height: 85px;
+  text-align: left;
+  transition: 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+}
+
+.cuadro-servicio:hover {
+  border-color: #ff6700;
+  background: #fff8f2;
+}
+
+.cuadro-servicio.seleccionado {
+  border-color: #ff6700;
+  background: #fff1e8;
+  box-shadow: 0 0 0 2px rgba(255, 103, 0, 0.12);
+}
+
+.cuadro-check {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 21px;
+  height: 21px;
+  border: 2px solid #aaa;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.cuadro-servicio.seleccionado .cuadro-check {
+  background: #ff6700;
+  border-color: #ff6700;
+  color: white;
+}
+
+.nombre-servicio {
+  font-weight: bold;
+  color: #333;
+  padding-right: 25px;
+}
+
+.precio-servicio {
+  color: #777;
+  font-size: 13px;
+}
+
 .dos-columnas {
   display: grid;
 
@@ -1613,7 +1693,25 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .dos-columnas {
+  .servicios-cuadricula {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.nombre-servicio {
+  font-weight: bold;
+  color: #000000;
+  padding-right: 30px;
+}
+
+.precio-servicio {
+  color: #777;
+  font-size: 13px;
+}
+
+.dos-columnas {
     grid-template-columns: 1fr;
   }
 
