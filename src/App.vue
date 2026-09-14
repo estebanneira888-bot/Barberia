@@ -351,8 +351,10 @@ function cancelarNota() {
         <h1>
           💈 Barbería Don Ramiro
         </h1>
+    
 
         <p class="descripcion">
+          Servicio 24/7<br>
           Control de servicios, clientes y pagos.
         </p>
 
