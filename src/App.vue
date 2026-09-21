@@ -154,8 +154,26 @@ function validarHora() {
 
 function seleccionarServicio(nombreServicio) {
   const posicion = servicio.value.indexOf(nombreServicio)
-  if (posicion >= 0) servicio.value.splice(posicion, 1)
-  else servicio.value.push(nombreServicio)
+
+  if (posicion >= 0) {
+    servicio.value.splice(posicion, 1)
+    mensaje.value = ''
+    cambiarServicio()
+    return
+  }
+
+  const esCorte = nombreServicio === 'Corte tradicional' || nombreServicio === 'Corte moderno'
+  const otroCorteSeleccionado = servicio.value.some(
+    item => item === 'Corte tradicional' || item === 'Corte moderno'
+  )
+
+  if (esCorte && otroCorteSeleccionado) {
+    mensaje.value = 'Solo puedes elegir un tipo de corte: tradicional o moderno.'
+    return
+  }
+
+  servicio.value.push(nombreServicio)
+  mensaje.value = ''
   cambiarServicio()
 }
 
@@ -387,7 +405,12 @@ function barberoMasCortes() {
   return ganador
 }
 
+function fechaPasada(item) {
+  return item.fecha < obtenerFechaHoy()
+}
+
 function seleccionarEstrellas(item, numero) {
+  if (Number(item.estrellas || 0) > 0) return
   item.estrellas = numero
 }
 
@@ -570,16 +593,6 @@ function eliminarServicioCatalogo(id) {
 
     <section class="paneles-superiores">
       <div class="panel">
-        <div class="panel-titulo"><h2>📊 Estadísticas del día</h2><span>{{ fechaMinima }}</span></div>
-        <div class="estadisticas">
-          <div><strong>{{ servicios.filter(item => item.fecha === fechaMinima).length }}</strong><small>Servicios hoy</small></div>
-          <div><strong>{{ formatearPrecio(totalVendido()) }}</strong><small>Total vendido</small></div>
-          <div><strong>{{ promedioCalificacion() }}</strong><small>Calificación</small></div>
-          <div><strong>{{ barberoMasCortes() }}</strong><small>Barbero destacado</small></div>
-        </div>
-      </div>
-
-      <div class="panel">
         <div class="panel-titulo"><h2>🔎 Historial por cliente</h2></div>
         <input v-model="historialNombre" @input="historialCliente" class="input-panel" placeholder="Escriba el nombre del cliente">
         <div v-if="historialNombre.trim()" class="historial-resultado">
@@ -617,7 +630,7 @@ function eliminarServicioCatalogo(id) {
           <button :class="{ activo: orden === 'fecha' }" @click="orden = 'fecha'">📅 Fecha</button>
           <button :class="{ activo: orden === 'precio' }" @click="orden = 'precio'">💰 Precio</button>
           <button :class="{ activo: orden === 'calificacion' }" @click="orden = 'calificacion'">⭐ Calificación</button>
-          <button class="btn-catalogo" @click="verCatalogo = true">⚙️ Catálogo</button>
+          <button class="btn-catalogo" @click="verCatalogo = true">📂 Catálogo</button>
           <button class="btn-caja" @click="cerrarCaja">🔒 Cerrar caja</button>
         </div>
       </div>
@@ -651,7 +664,7 @@ function eliminarServicioCatalogo(id) {
 
             <div v-if="item.descuento" class="descuento-card">🎉 Descuento de fidelidad: -{{ formatearPrecio(item.descuento) }}</div>
 
-            <div class="calificacion"><div class="estrellas-card"><button v-for="numero in 5" :key="numero" type="button" class="estrella" :class="{ activa: numero <= (item.estrellas || 0) }" @click="seleccionarEstrellas(item, numero)">{{ numero <= (item.estrellas || 0) ? '★' : '☆' }}</button></div><small>{{ item.estrellas || 0 }}/5</small></div>
+            <div class="calificacion"><div class="estrellas-card"><button v-for="numero in 5" :key="numero" type="button" class="estrella" :class="{ activa: numero <= (item.estrellas || 0) }" :disabled="Number(item.estrellas || 0) > 0" @click="seleccionarEstrellas(item, numero)">{{ numero <= (item.estrellas || 0) ? '★' : '☆' }}</button></div><small>{{ item.estrellas || 0 }}/5</small></div>
 
             <div v-if="item.antes || item.despues" class="fotos-card">
               <div v-if="item.antes"><small>ANTES</small><img :src="item.antes" alt="Antes"></div>
@@ -664,7 +677,7 @@ function eliminarServicioCatalogo(id) {
               <div v-else class="editar-observacion"><textarea v-model="notaTemporal" placeholder="Escriba una observación..."></textarea><div class="botones-nota"><button type="button" class="btn-cancelar-nota" @click="cancelarNota">Cancelar</button><button type="button" class="btn-guardar-nota" @click="guardarNota(item)">💾 Guardar</button></div></div>
             </div>
 
-            <div class="acciones"><button class="btn-editar" @click="editar(item)">✏️ Editar</button><button class="btn-borrar" @click="confirmarEliminar(item.id)">🗑</button></div>
+            <div v-if="!fechaPasada(item)" class="acciones"><button class="btn-editar" @click="editar(item)">✏️ Editar</button><button class="btn-borrar" @click="confirmarEliminar(item.id)">🗑</button></div>
           </article>
         </template>
       </div>
@@ -725,20 +738,152 @@ button:hover { filter: brightness(.96); }
 .boton-principal { background: #ff6700; color: white; font-size: 15px; }
 .resumen { max-width: 1200px; margin: 25px auto; padding: 0 20px; display: grid; grid-template-columns: repeat(4,1fr); gap: 15px; }
 .caja-resumen { background: white; padding: 20px; border-radius: 12px; display: flex; gap: 15px; align-items: center; box-shadow: 0 2px 8px #ddd; min-width: 0; }
-.caja-resumen > span { font-size: 30px; }.caja-resumen small { color:#777; }.caja-resumen h2 { margin-top:5px; font-size:23px; }
+.caja-resumen > span { font-size: 30px; }
+.caja-resumen small { color:#777; }
+.caja-resumen h2 { margin-top:5px; font-size:23px; }
 .paneles-superiores { max-width:1200px; margin:0 auto 20px; padding:0 20px; display:grid; grid-template-columns:1fr 1fr; gap:15px; }
-.panel { background:white; border-radius:12px; padding:18px; box-shadow:0 2px 8px #ddd; }.panel-titulo { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:15px; }.panel-titulo h2 { font-size:22px; }.panel-titulo span { color:#777; font-size:13px; }
-.estadisticas { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }.estadisticas div { background:#f7f8f9; border-radius:9px; padding:12px; text-align:center; }.estadisticas strong { display:block; font-size:18px; }.estadisticas small { color:#777; }
-.input-panel { width:100%; padding:12px; border:1px solid #ccd3d7; border-radius:7px; outline:none; }.historial-resultado { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }.historial-resultado div { background:#f2f7ff; padding:12px; border-radius:8px; text-align:center; }.historial-resultado strong,.historial-resultado span { display:block; }.historial-resultado span { color:#777; font-size:12px; }
-.tabla-comisiones { display:flex; flex-direction:column; gap:8px; }.fila-comision,.fila-deuda { display:grid; grid-template-columns:1.5fr 1fr 1fr; align-items:center; gap:10px; padding:10px; background:#f7f8f9; border-radius:7px; }.fila-comision small { color:#777; }.fila-comision strong,.fila-deuda strong { text-align:right; }.panel-deudas { max-height:250px; overflow:auto; }.fila-deuda { grid-template-columns:1fr 1fr; }.sin-datos { color:#777; padding:10px; }
-.contenido { max-width:1200px; margin:auto; padding:0 20px 40px; }.titulo-lista { margin-bottom:20px; display:flex; justify-content:space-between; gap:15px; align-items:end; }.titulo-lista h2 { font-size:30px; }.titulo-lista p { color:#777; margin-top:5px; }.acciones-lista { display:flex; flex-wrap:wrap; gap:7px; }.acciones-lista button { background:#fff; border:1px solid #d5dadd; padding:9px 12px; }.acciones-lista .activo { background:#202020; color:white; }.acciones-lista .btn-catalogo { background:#e9eef0; }.acciones-lista .btn-caja { background:#d63031; color:white; }
-.lista-turnos { display:flex; flex-direction:column; gap:15px; }.separador-turno { display:flex; align-items:center; gap:12px; margin:8px 0 0; color:#333; font-weight:bold; }.separador-turno:before,.separador-turno:after { content:''; height:1px; background:#8d9ca1; flex:1; }.separador-turno span { background:#dce5e7; padding:8px 15px; border-radius:20px; }
-.servicio-card { background:white; padding:20px; border-radius:12px; border-top:5px solid #333; box-shadow:0 3px 10px #ddd; }.sinPagar { border-top-color:#f0a500; }.fiadoCard { border-top-color:#d63031; }.card-superior { display:flex; align-items:center; gap:10px; }.avatar { width:45px;height:45px;background:#202020;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;text-transform:uppercase; }.card-superior h3 { font-size:18px; }.card-superior p { color:#777;font-size:14px; }.estado { margin-left:auto;font-size:12px;padding:6px;border-radius:5px; }.pagado { background:#d7f5df;color:#187a35; }.pendiente { background:#fff1cc;color:#a56c00; }.fiado { background:#ffdede;color:#a71919; }
-.datos { margin-top:18px; display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }.datos small { color:#888;font-size:10px;font-weight:bold; }.datos p { margin-top:4px;color:#444;font-size:14px; }.datos p span { color:#198754;font-weight:bold; }.descuento-card { margin-top:12px; padding:10px; background:#e8f8ed;color:#187a35;border-radius:7px;font-weight:bold; }
-.calificacion { display:flex;align-items:center;gap:8px;margin-top:15px; }.estrellas-card { display:flex; }.estrella { padding:2px 4px;background:transparent;font-size:22px;color:#bbb; }.estrella.activa { color:#f0a500; }.fotos-card,.previsualizaciones { display:flex; gap:12px; margin-top:15px; }.fotos-card div,.previsualizaciones div { display:flex; flex-direction:column; gap:4px; }.fotos-card small,.previsualizaciones small { color:#777;font-size:10px;font-weight:bold; }.fotos-card img { width:95px;height:75px;object-fit:cover;border-radius:7px; }.observacion { margin-top:15px;padding-top:15px;border-top:1px solid #eee; }.titulo-observacion { display:flex;justify-content:space-between; }.btn-editar-nota { padding:3px 7px;background:#eee; }.texto-observacion { margin-top:8px;color:#555;font-size:14px; }.sin-observacion { color:#999; }.editar-observacion textarea,textarea { width:100%;min-height:70px;border:1px solid #ccd3d7;border-radius:7px;padding:10px;resize:vertical;font-family:Arial; }.botones-nota { display:flex;justify-content:flex-end;gap:8px;margin-top:7px; }.btn-cancelar-nota { background:#eee; }.btn-guardar-nota { background:#222;color:#fff; }.acciones { margin-top:15px;padding-top:15px;border-top:1px solid #eee;display:flex;gap:8px; }.btn-editar { background:#eef2f4;color:#333; }.btn-borrar { background:#d63031;color:white; }
-.vacio { background:white;padding:50px;text-align:center;border-radius:12px;box-shadow:0 3px 10px #ddd; }.icono-vacio { font-size:50px; }.vacio h2 { margin:10px 0; }.vacio p { color:#777;margin-bottom:15px; }.vacio button { background:#ff6700;color:white; }
-.fondo-modal { position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:20px;z-index:20;overflow:auto; }.ventana,.confirmar { background:white;border-radius:14px;width:min(700px,100%);max-height:94vh;overflow:auto;padding:25px; }.confirmar { width:min(430px,100%);text-align:center; }.cabecera-modal { display:flex;justify-content:space-between;gap:15px;align-items:flex-start;margin-bottom:20px; }.cabecera-modal h2 { font-size:27px; }.cabecera-modal p { color:#777;margin-top:5px; }.x { background:transparent;padding:5px; }.grupo { margin-bottom:15px; }.grupo label { display:block;font-weight:bold;color:#374151;margin-bottom:7px; }.grupo input,.grupo select { width:100%;padding:12px;border:1px solid #ccd3d7;border-radius:7px;background:white;outline:none; }.grupo input:focus,.grupo select:focus,textarea:focus { border-color:#ff6700; }.dos-columnas { display:grid;grid-template-columns:1fr 1fr;gap:15px; }.servicios-cuadricula { display:grid;grid-template-columns:1fr 1fr;gap:10px; }.cuadro-servicio { position:relative;background:white;border:2px solid #d5d5d5;border-radius:10px;padding:14px;min-height:80px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px; }.cuadro-servicio.seleccionado { border-color:#ff6700;background:#fff1e8; }.cuadro-check { position:absolute;top:8px;right:8px;width:21px;height:21px;border:2px solid #aaa;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px; }.seleccionado .cuadro-check { background:#ff6700;border-color:#ff6700;color:#fff; }.nombre-servicio { font-weight:bold;padding-right:25px; }.precio-servicio { color:#777;font-size:13px; }.alerta-fidelidad { background:#fff3cd;border:1px solid #ffe08a;color:#765b00;padding:12px;border-radius:8px;margin-bottom:15px;font-weight:bold; }.total-descuento { background:#eaf7ee;color:#187a35;padding:10px;border-radius:7px;margin-bottom:15px;font-size:13px; }.mensaje-error { background:#ffe1e1;color:#a71919;padding:11px;border-radius:7px;margin-bottom:15px; }.mensaje-exito { background:#dff5e6;color:#187a35;padding:12px;border-radius:8px;margin-bottom:15px; }.fotos-inputs { display:flex;gap:10px; }.subir-foto { flex:1;background:#f1f4f5;border:1px dashed #9ba8ad;border-radius:8px;padding:12px;text-align:center;cursor:pointer; }.subir-foto input { display:none; }.ayuda { color:#888;display:block;margin-top:6px; }.previsualizaciones img { width:110px;height:85px;object-fit:cover;border-radius:7px; }.pie-modal { display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:15px;border-top:1px solid #eee; }.cancelar { background:#eee;color:#333; }.guardar { background:#ff6700;color:#fff; }.alerta { font-size:45px;margin-bottom:10px; }.botones-confirmar { display:flex;justify-content:center;gap:10px;margin-top:20px; }
-.caja-ventana { width:min(650px,100%); }.resumen-caja { display:grid;grid-template-columns:repeat(3,1fr);gap:10px; }.resumen-caja div { background:#f5f7f8;padding:15px;border-radius:9px;text-align:center; }.resumen-caja span,.resumen-caja small,.resumen-caja strong { display:block; }.resumen-caja span { font-size:25px; }.resumen-caja small { color:#777;margin:5px 0; }.aviso-caja { margin-top:15px;background:#fff3cd;padding:12px;border-radius:8px;color:#765b00; }.catalogo-ventana { width:min(800px,100%); }.catalogo-form { display:grid;grid-template-columns:1.4fr 1fr auto;gap:8px;margin-bottom:15px; }.catalogo-form input { padding:11px;border:1px solid #ccd3d7;border-radius:7px; }.catalogo-lista { display:flex;flex-direction:column;gap:8px; }.fila-catalogo { display:flex;justify-content:space-between;align-items:center;background:#f6f7f8;padding:10px;border-radius:8px; }.fila-catalogo > div:first-child { display:flex;flex-direction:column;gap:3px; }.fila-catalogo span { color:#777;font-size:13px; }.fila-catalogo button { padding:7px 10px;margin-left:5px; }
-@media (max-width:900px) { .resumen { grid-template-columns:repeat(2,1fr); }.paneles-superiores { grid-template-columns:1fr; }.estadisticas { grid-template-columns:repeat(2,1fr); } }
-@media (max-width:650px) { .inicio { flex-direction:column;align-items:flex-start;gap:20px; }.inicio h1 { font-size:36px; }.resumen { grid-template-columns:1fr; }.titulo-lista { flex-direction:column;align-items:flex-start; }.dos-columnas,.servicios-cuadricula,.datos,.resumen-caja,.catalogo-form { grid-template-columns:1fr; }.card-superior { align-items:flex-start; }.estado { margin-left:auto; }.acciones-lista { width:100%; }.acciones-lista button { flex:1; }.fotos-inputs { flex-direction:column; } }
+.panel { background:white; border-radius:12px; padding:18px; box-shadow:0 2px 8px #ddd; }
+.panel-titulo { display:flex; justify-content:space-between; gap:10px; align-items:center; margin-bottom:15px; }
+.panel-titulo h2 { font-size:22px; }
+.panel-titulo span { color:#777; font-size:13px; }
+.estadisticas { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.estadisticas div { background:#f7f8f9; border-radius:9px; padding:12px; text-align:center; }
+.estadisticas strong { display:block; font-size:18px; }
+.estadisticas small { color:#777; }
+.input-panel { width:100%; padding:12px; border:1px solid #ccd3d7; border-radius:7px; outline:none; }
+.historial-resultado { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+.historial-resultado div { background:#f2f7ff; padding:12px; border-radius:8px; text-align:center; }
+.historial-resultado strong,
+.historial-resultado span { display:block; }
+.historial-resultado span { color:#777; font-size:12px; }
+.tabla-comisiones { display:flex; flex-direction:column; gap:8px; }
+.fila-comision,.fila-deuda { display:grid; grid-template-columns:1.5fr 1fr 1fr; align-items:center; gap:10px; padding:10px; background:#f7f8f9; border-radius:7px; }
+.fila-comision small { color:#777; }
+.fila-comision strong,
+.fila-deuda strong { text-align:right; }
+.panel-deudas { max-height:250px; overflow:auto; }
+.fila-deuda { grid-template-columns:1fr 1fr; }
+.sin-datos { color:#777; padding:10px; }
+.contenido { max-width:1200px; margin:auto; padding:0 20px 40px; }
+.titulo-lista { margin-bottom:20px; display:flex; justify-content:space-between; gap:15px; align-items:end; }
+.titulo-lista h2 { font-size:30px; }
+.titulo-lista p { color:#777; margin-top:5px; }
+.acciones-lista { display:flex; flex-wrap:wrap; gap:7px; }
+.acciones-lista button { background:#fff; border:1px solid #d5dadd; padding:9px 12px; }
+.acciones-lista .activo { background:#202020; color:white; }
+.acciones-lista .btn-catalogo { background:#e9eef0; }
+.acciones-lista .btn-caja { background:#d63031; color:white; }
+.lista-turnos { display:flex; flex-direction:column; gap:15px; }
+.separador-turno { display:flex; align-items:center; gap:12px; margin:8px 0 0; color:#333; font-weight:bold; }
+.separador-turno:before,.separador-turno:after { content:''; height:1px; background:#8d9ca1; flex:1; }
+.separador-turno span { background:#dce5e7; padding:8px 15px; border-radius:20px; }
+.servicio-card { background:white; padding:20px; border-radius:12px; border-top:5px solid #333; box-shadow:0 3px 10px #ddd; }
+.sinPagar { border-top-color:#f0a500; }
+.fiadoCard { border-top-color:#d63031; }
+.card-superior { display:flex; align-items:center; gap:10px; }
+.avatar { width:45px;height:45px;background:#202020;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;text-transform:uppercase; }
+.card-superior h3 { font-size:18px; }
+.card-superior p { color:#777;font-size:14px; }
+.estado { margin-left:auto;font-size:12px;padding:6px;border-radius:5px; }
+.pagado { background:#d7f5df;color:#187a35; }
+.pendiente { background:#fff1cc;color:#a56c00; }
+.fiado { background:#ffdede;color:#a71919; }
+.datos { margin-top:18px; display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.datos small { color:#888;font-size:10px;font-weight:bold; }
+.datos p { margin-top:4px;color:#444;font-size:14px; }
+.datos p span { color:#198754;font-weight:bold; }
+.descuento-card { margin-top:12px; padding:10px; background:#e8f8ed;color:#187a35;border-radius:7px;font-weight:bold; }
+.calificacion { display:flex;align-items:center;gap:8px;margin-top:15px; }
+.estrellas-card { display:flex; }
+.estrella { padding:2px 4px;background:transparent;font-size:22px;color:#bbb; }
+.estrella.activa { color:#f0a500; }
+.fotos-card,.previsualizaciones { display:flex; gap:12px; margin-top:15px; }
+.fotos-card div,.previsualizaciones div { display:flex; flex-direction:column; gap:4px; }
+.fotos-card small,.previsualizaciones small { color:#777;font-size:10px;font-weight:bold; }
+.fotos-card img { width:95px;height:75px;object-fit:cover;border-radius:7px; }
+.observacion { margin-top:15px;padding-top:15px;border-top:1px solid #eee; }
+.titulo-observacion { display:flex;justify-content:space-between; }
+.btn-editar-nota { padding:3px 7px;background:#eee; }
+.texto-observacion { margin-top:8px;color:#555;font-size:14px; }
+.sin-observacion { color:#999; }
+.editar-observacion textarea,textarea { width:100%;min-height:70px;border:1px solid #ccd3d7;border-radius:7px;padding:10px;resize:vertical;font-family:Arial; }
+.botones-nota { display:flex;justify-content:flex-end;gap:8px;margin-top:7px; }
+.btn-cancelar-nota { background:#eee; }
+.btn-guardar-nota { background:#222;color:#fff; }
+.acciones { margin-top:15px;padding-top:15px;border-top:1px solid #eee;display:flex;gap:8px; }
+.btn-editar { background:#eef2f4;color:#333; }
+.btn-borrar { background:#d63031;color:white; }
+.vacio { background:white;padding:50px;text-align:center;border-radius:12px;box-shadow:0 3px 10px #ddd; }
+.icono-vacio { font-size:50px; }
+.vacio h2 { margin:10px 0; }
+.vacio p { color:#777;margin-bottom:15px; }
+.vacio button { background:#ff6700;color:white; }
+.fondo-modal { position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:20px;z-index:20;overflow:auto; }
+.ventana,.confirmar { background:white;border-radius:14px;width:min(700px,100%);max-height:94vh;overflow:auto;padding:25px; }
+.confirmar { width:min(430px,100%);text-align:center; }
+.cabecera-modal { display:flex;justify-content:space-between;gap:15px;align-items:flex-start;margin-bottom:20px; }
+.cabecera-modal h2 { font-size:27px; }
+.cabecera-modal p { color:#777;margin-top:5px; }.x { background:transparent;padding:5px; }
+.grupo { margin-bottom:15px; }
+.grupo label { display:block;font-weight:bold;color:#374151;margin-bottom:7px; }
+.grupo input,
+.grupo select { width:100%;padding:12px;border:1px solid #ccd3d7;border-radius:7px;background:white;outline:none; }
+.grupo input:focus,
+.grupo select:focus,textarea:focus { border-color:#ff6700; }
+.dos-columnas { display:grid;grid-template-columns:1fr 1fr;gap:15px; }
+.servicios-cuadricula { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+.cuadro-servicio { position:relative;background:white;border:2px solid #d5d5d5;border-radius:10px;padding:14px;min-height:80px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px; }
+.cuadro-servicio.seleccionado { border-color:#ff6700;background:#fff1e8; }
+.cuadro-check { position:absolute;top:8px;right:8px;width:21px;height:21px;border:2px solid #aaa;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px; }
+.seleccionado .cuadro-check { background:#ff6700;border-color:#ff6700;color:#fff; }
+.nombre-servicio { font-weight:bold;padding-right:25px; }
+.precio-servicio { color:#777;font-size:13px; }
+.alerta-fidelidad { background:#fff3cd;border:1px solid #ffe08a;color:#765b00;padding:12px;border-radius:8px;margin-bottom:15px;font-weight:bold; }
+.total-descuento { background:#eaf7ee;color:#187a35;padding:10px;border-radius:7px;margin-bottom:15px;font-size:13px; }
+.mensaje-error { background:#ffe1e1;color:#a71919;padding:11px;border-radius:7px;margin-bottom:15px; }
+.mensaje-exito { background:#dff5e6;color:#187a35;padding:12px;border-radius:8px;margin-bottom:15px; }
+.fotos-inputs { display:flex;gap:10px; }
+.subir-foto { flex:1;background:#f1f4f5;border:1px dashed #9ba8ad;border-radius:8px;padding:12px;text-align:center;cursor:pointer; }
+.subir-foto input { display:none; }
+.ayuda { color:#888;display:block;margin-top:6px; }
+.previsualizaciones img { width:110px;height:85px;object-fit:cover;border-radius:7px; }
+.pie-modal { display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:15px;border-top:1px solid #eee; }
+.cancelar { background:#eee;color:#333; }
+.guardar { background:#ff6700;color:#fff; }
+.alerta { font-size:45px;margin-bottom:10px; }
+.botones-confirmar { display:flex;justify-content:center;gap:10px;margin-top:20px; }
+.caja-ventana { width:min(650px,100%); }
+.resumen-caja { display:grid;grid-template-columns:repeat(3,1fr);gap:10px; }
+.resumen-caja div { background:#f5f7f8;padding:15px;border-radius:9px;text-align:center; }
+.resumen-caja span,.resumen-caja small,
+.resumen-caja strong { display:block; }
+.resumen-caja span { font-size:25px; }
+.resumen-caja small { color:#777;margin:5px 0; }
+.aviso-caja { margin-top:15px;background:#fff3cd;padding:12px;border-radius:8px;color:#765b00; }
+.catalogo-ventana { width:min(800px,100%); }
+.catalogo-form { display:grid;grid-template-columns:1.4fr 1fr auto;gap:8px;margin-bottom:15px; }
+.catalogo-form input { padding:11px;border:1px solid #ccd3d7;border-radius:7px; }
+.catalogo-lista { display:flex;flex-direction:column;gap:8px; }
+.fila-catalogo { display:flex;justify-content:space-between;align-items:center;background:#f6f7f8;padding:10px;border-radius:8px; }
+.fila-catalogo > div:first-child { display:flex;flex-direction:column;gap:3px; }
+.fila-catalogo span { color:#777;font-size:13px; }
+.fila-catalogo button { padding:7px 10px;margin-left:5px; }
+@media (max-width:900px) { .resumen { grid-template-columns:repeat(2,1fr); }
+.paneles-superiores { grid-template-columns:1fr; }
+.estadisticas { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:650px) { 
+  .inicio { flex-direction:column;align-items:flex-start;gap:20px; }
+  .inicio h1 { font-size:36px; }
+.resumen { grid-template-columns:1fr; }
+.titulo-lista { flex-direction:column;align-items:flex-start; }
+.dos-columnas,
+.servicios-cuadricula,
+.datos,
+.resumen-caja,
+.catalogo-form { grid-template-columns:1fr; }
+.card-superior { align-items:flex-start; }
+.estado { margin-left:auto; }
+.acciones-lista { width:100%; }
+.acciones-lista button { flex:1; }
+.fotos-inputs { flex-direction:column; } }
 </style>
